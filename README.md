@@ -1,1 +1,268 @@
 # Universal-Vocabulary-Trainer
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Universal Vocabulary Trainer</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(135deg, #eef2ff, #c7d2fe);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  background: white;
+  width: 440px;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.15);
+}
+
+.hero {
+  width: 100%;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.12);
+}
+
+.hero img {
+  width: 100%;
+  height: auto;              /* ❗ ничего не режем */
+  display: block;
+  border-radius: 14px;
+}
+
+h1 { text-align: center; font-size: 22px; }
+
+textarea {
+  width: 100%;
+  height: 140px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+}
+
+select, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+}
+
+button {
+  background: #4f46e5;
+  color: white;
+  cursor: pointer;
+}
+
+.secondary { background: #64748b; }
+
+.card {
+  margin-top: 15px;
+  background: #f1f5f9;
+  padding: 22px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.word, .answer {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.answer { margin-top: 14px; display: none; }
+
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.small {
+  flex: 1;
+  background: #e5e7eb;
+  color: #111;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-top: 4px;
+}
+
+.mode {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #111827;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- ЛОГОТИП. БОЛЬШЕ НИЧЕГО НЕ ТРОНУТО -->
+  <div class="hero">
+  <img src="logo.png" alt="Universal Vocabulary Trainer">
+</div>
+
+<select id="uiLang" onchange="setUILang()">
+  <option value="ru">Русский</option>
+  <option value="en">English</option>
+  <option value="es">Español</option>
+  <option value="it">Italiano</option>
+</select>
+
+<h1 id="title"></h1>
+<textarea id="input"></textarea>
+
+<select id="langA"></select>
+<select id="langB"></select>
+
+<button onclick="loadWords()" id="loadBtn"></button>
+
+<div id="card" class="card" style="display:none">
+  <div class="word" id="question"></div>
+  <div class="answer" id="answer"></div>
+
+  <button class="secondary" onclick="toggle()" id="showBtn"></button>
+
+  <div class="controls">
+    <div style="flex:1">
+      <button class="small" onclick="speak('question')">🔊</button>
+      <div class="label" id="labelQ"></div>
+    </div>
+    <div style="flex:1">
+      <button class="small" onclick="speak('answer')">🔊</button>
+      <div class="label" id="labelA"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="small" onclick="prev()" id="prevBtn"></button>
+    <button class="small" onclick="next()" id="nextBtn"></button>
+  </div>
+
+  <div class="controls">
+    <button class="small" onclick="setMode('A-B')">A → B</button>
+    <button class="small" onclick="setMode('B-A')">B → A</button>
+    <button class="small" onclick="setMode('random')">🔀</button>
+  </div>
+
+  <div class="mode" id="mode"></div>
+</div>
+</div>
+
+<script>
+const UI = {
+  ru:{title:"Универсальный тренажёр слов",load:"Загрузить словарь",show:"Перевод",
+      word:"СЛОВО",trans:"ПЕРЕВОД",prev:"← Назад",next:"Вперёд →"},
+  en:{title:"Universal Vocabulary Trainer",load:"Load vocabulary",show:"Translation",
+      word:"WORD",trans:"TRANSLATION",prev:"← Back",next:"Next →"},
+  es:{title:"Entrenador de vocabulario",load:"Cargar vocabulario",show:"Traducción",
+      word:"PALABRA",trans:"TRADUCCIÓN",prev:"← Atrás",next:"Siguiente →"},
+  it:{title:"Allenatore di vocaboli",load:"Carica vocabolario",show:"Traduzione",
+      word:"PAROLA",trans:"TRADUZIONE",prev:"← Indietro",next:"Avanti →"}
+};
+
+function setUILang(){
+  const l=uiLang.value;
+  title.textContent=UI[l].title;
+  loadBtn.textContent=UI[l].load;
+  showBtn.textContent=UI[l].show;
+  prevBtn.textContent=UI[l].prev;
+  nextBtn.textContent=UI[l].next;
+  updateLabels();
+}
+
+const langs = [
+  ["ru-RU","Русский"],["en-US","English"],["en-GB","English UK"],
+  ["es-ES","Español"],["es-MX","Español MX"],
+  ["it-IT","Italiano"],["fr-FR","Français"],["de-DE","Deutsch"],
+  ["pt-PT","Português"],["pt-BR","Português BR"],
+  ["nl-NL","Nederlands"],["pl-PL","Polski"],
+  ["cs-CZ","Čeština"],["sk-SK","Slovenčina"],
+  ["sl-SI","Slovenščina"],
+  ["hr-HR","Hrvatski"],
+  ["sr-RS","Српски"],["bg-BG","Български"],
+  ["ro-RO","Română"],["hu-HU","Magyar"],
+  ["el-GR","Ελληνικά"],
+  ["tr-TR","Türkçe"],
+  ["uk-UA","Українська"],
+  ["ar-SA","العربية"],
+  ["he-IL","עברית"],
+  ["hi-IN","हिन्दी"],
+  ["ja-JP","日本語"],
+  ["ko-KR","한국어"],
+  ["zh-CN","中文 (简体)"],
+  ["zh-TW","中文 (繁體)"]
+];
+
+langs.forEach(l=>{
+  langA.add(new Option(l[1],l[0]));
+  langB.add(new Option(l[1],l[0]));
+});
+
+let words=[],index=0,mode="A-B",direction="A-B";
+
+function loadWords(){
+  words=[];
+  input.value.split("\n").forEach(line=>{
+    const p=line.split(/\s*[-–—:]\s*/);
+    if(p.length>=2) words.push({A:p[0].trim(),B:p.slice(1).join(" ").trim()});
+  });
+  if(!words.length) return alert("Словарь не распознан");
+  index=0;card.style.display="block";show();
+}
+
+function setMode(m){mode=m;show();}
+
+function show(){
+  const w=words[index];
+  answer.style.display="none";
+  direction=mode==="random"?(Math.random()>.5?"A-B":"B-A"):mode;
+  question.textContent=direction==="A-B"?w.A:w.B;
+  answer.textContent=direction==="A-B"?w.B:w.A;
+  mode.textContent = direction === "A-B" ? "СЛОВАРЬ:  A → B" : "СЛОВАРЬ:  B → A";
+  updateLabels();
+}
+
+function updateLabels(){
+  const l=uiLang.value;
+  labelQ.textContent=direction==="A-B"?UI[l].word:UI[l].trans;
+  labelA.textContent=direction==="A-B"?UI[l].trans:UI[l].word;
+}
+
+function toggle(){
+  answer.style.display=answer.style.display==="none"?"block":"none";
+}
+
+function speak(which){
+  const u=new SpeechSynthesisUtterance(
+    document.getElementById(which).textContent
+  );
+  u.lang = which==="question"
+    ? (direction==="A-B"?langA.value:langB.value)
+    : (direction==="A-B"?langB.value:langA.value);
+  speechSynthesis.speak(u);
+}
+
+function next(){index=(index+1)%words.length;show();}
+function prev(){index=(index-1+words.length)%words.length;show();}
+
+setUILang();
+</script>
+</body>
+</html>
